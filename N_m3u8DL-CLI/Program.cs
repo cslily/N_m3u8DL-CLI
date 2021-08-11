@@ -28,13 +28,11 @@ namespace N_m3u8DL_CLI.NetCore
                 case 0:
                     LOGGER.WriteLine(strings.ExitedCtrlC
                     + "\r\n\r\nTask End: " + DateTime.Now.ToString("yyyy/MM/dd HH:mm:ss")); //Ctrl+C关闭
-                    Console.CursorVisible = true;
                     Console.SetCursorPosition(0, LOGGER.CursorIndex);
                     break;
                 case 2:
                     LOGGER.WriteLine(strings.ExitedForce
                     + "\r\n\r\nTask End: " + DateTime.Now.ToString("yyyy/MM/dd HH:mm:ss")); //按控制台关闭按钮关闭
-                    Console.CursorVisible = true;
                     Console.SetCursorPosition(0, LOGGER.CursorIndex);
                     break;
             }
@@ -279,6 +277,7 @@ namespace N_m3u8DL_CLI.NetCore
                         {
                             Parser.DurStart = reg2.Match(p).Groups[1].Value;
                             Parser.DurEnd = reg2.Match(p).Groups[5].Value;
+                            if (Parser.DurEnd == "00:00:00") Parser.DurEnd = "";
                             Parser.DelAd = false;
                         }
                     }
@@ -335,7 +334,6 @@ namespace N_m3u8DL_CLI.NetCore
                     testurl = args[0];
                 else
                 {
-                    Console.CursorVisible = true;
                     Console.ForegroundColor = ConsoleColor.Cyan;
                     Console.Write("N_m3u8DL-CLI");
                     Console.ResetColor();
@@ -343,7 +341,6 @@ namespace N_m3u8DL_CLI.NetCore
 
                     args = Global.ParseArguments(Console.ReadLine()).ToArray();  //解析命令行
                     Global.WriteInit();
-                    Console.CursorVisible = false;
                     goto parseArgs;
                 }
 
@@ -376,7 +373,6 @@ namespace N_m3u8DL_CLI.NetCore
 
                 //开始解析
 
-                Console.CursorVisible = false;
                 LOGGER.PrintLine($"{strings.fileName}{fileName}");
                 LOGGER.PrintLine($"{strings.savePath}{Path.GetDirectoryName(Path.Combine(workDir, fileName))}");
 
@@ -391,7 +387,7 @@ namespace N_m3u8DL_CLI.NetCore
                     parser.BaseUrl = baseUrl;
                 parser.Headers = reqHeaders;
                 string exePath = Path.GetDirectoryName(Process.GetCurrentProcess().MainModule.FileName);
-                LOGGER.LOGFILE = Path.Combine(exePath, "Logs", DateTime.Now.ToString("yyyy-MM-dd_HH-mm-ss") + ".log");
+                LOGGER.LOGFILE = Path.Combine(exePath, "Logs", DateTime.Now.ToString("yyyy-MM-dd_HH-mm-ss-fff") + ".log");
                 LOGGER.InitLog();
                 LOGGER.WriteLine(strings.startParsing + testurl);
                 LOGGER.PrintLine(strings.startParsing, LOGGER.Warning);
@@ -486,14 +482,12 @@ namespace N_m3u8DL_CLI.NetCore
                 HTTPListener.StartListening();*/
                 LOGGER.WriteLineError(strings.downloadFailed);
                 LOGGER.PrintLine(strings.downloadFailed, LOGGER.Error);
-                Console.CursorVisible = true;
                 Thread.Sleep(3000);
                 Environment.Exit(-1);
                 //Console.Write("按任意键继续..."); Console.ReadKey(); return;
             }
             catch (Exception ex)
             {
-                Console.CursorVisible = true;
                 LOGGER.PrintLine(ex.Message, LOGGER.Error);
             }
         }

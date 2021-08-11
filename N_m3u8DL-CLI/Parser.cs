@@ -105,6 +105,11 @@ namespace N_m3u8DL_CLI
             if (!LiveStream)
                 LOGGER.PrintLine(strings.downloadingM3u8, LOGGER.Warning);
 
+            if (M3u8Url.Contains(".cntv."))
+            {
+                M3u8Url = M3u8Url.Replace("/h5e/", "/");
+            }
+
             if (M3u8Url.StartsWith("http"))
             {
                 if (M3u8Url.Contains("nfmovies.com/hls"))
@@ -139,11 +144,6 @@ namespace N_m3u8DL_CLI
                 m3u8Content = DecodeImooc.DecodeM3u8(m3u8Content);
             }
 
-            if (M3u8Url.Contains("cntv.qcloudcdn.com"))
-            {
-                M3u8Url = M3u8Url.Replace("/h5e/", "/");
-            }
-
             if (m3u8Content.Contains("</MPD>") && m3u8Content.Contains("<MPD"))
             {
                 LOGGER.PrintLine(strings.startParsingMpd, LOGGER.Warning);
@@ -154,6 +154,17 @@ namespace N_m3u8DL_CLI
                 //分析mpd文件
                 M3u8Url = Global.Get302(M3u8Url, Headers);
                 var newUri = MPDParser.Parse(DownDir, M3u8Url, m3u8Content, BaseUrl);
+                M3u8Url = newUri;
+                m3u8Content = File.ReadAllText(new Uri(M3u8Url).LocalPath);
+            }
+
+            if (m3u8Content.StartsWith("{\"payload\""))
+            {
+                var iqJsonPath = Path.Combine(DownDir, "iq.json");
+                //输出mpd文件
+                File.WriteAllText(iqJsonPath, m3u8Content);
+                //分析json文件
+                var newUri = IqJsonParser.Parse(DownDir, m3u8Content);
                 M3u8Url = newUri;
                 m3u8Content = File.ReadAllText(new Uri(M3u8Url).LocalPath);
             }
@@ -171,13 +182,24 @@ namespace N_m3u8DL_CLI
                 }
             }
 
-            //正对Disney+修正
+            //针对Disney+修正
             if (m3u8Content.Contains("#EXT-X-DISCONTINUITY") && m3u8Content.Contains("#EXT-X-MAP") && M3u8Url.Contains("media.dssott.com/"))
             {
                 Regex ykmap = new Regex("#EXT-X-MAP:URI=\\\".*?BUMPER/[\\s\\S]+?#EXT-X-DISCONTINUITY");
                 if (ykmap.IsMatch(m3u8Content))
                 {
                     m3u8Content = m3u8Content.Replace(ykmap.Match(m3u8Content).Value, "#XXX");
+                }
+            }
+
+            //针对AppleTv修正
+            if (m3u8Content.Contains("#EXT-X-DISCONTINUITY") && m3u8Content.Contains("#EXT-X-MAP") && M3u8Url.Contains(".apple.com/"))
+            {
+                //只取加密部分即可
+                Regex ykmap = new Regex("(#EXT-X-KEY:[\\s\\S]*?)#EXT-X-DISCONTINUITY");
+                if (ykmap.IsMatch(m3u8Content))
+                {
+                    m3u8Content = "#EXTM3U\r\n" + ykmap.Match(m3u8Content).Groups[1].Value + "\r\n#EXT-X-ENDLIST";
                 }
             }
 
@@ -531,7 +553,7 @@ namespace N_m3u8DL_CLI
                         }
                         sb.Append("}");
                         extLists.Add(sb.ToString().Replace(",}", "}"));
-                        if (Convert.ToInt64(extList[0]) > bestBandwidth)
+                        if (Convert.ToInt64(extList[0]) >= bestBandwidth)
                         {
                             bestBandwidth = Convert.ToInt64(extList[0]);
                             bestUrl = listUrl;
@@ -602,12 +624,10 @@ namespace N_m3u8DL_CLI
                         Console.WriteLine("".PadRight(13) + $"[{i.ToString().PadLeft(2)}]. {bestUrlAudio} => {MEDIA_AUDIO_GROUP[bestUrlAudio][i]}");
                         LOGGER.CursorIndex++;
                     }
-                    Console.CursorVisible = true;
                     LOGGER.PrintLine("Please Select What You Want.(Up To 1 Track)");
                     Console.Write("".PadRight(13) + "Enter Number: ");
                     var input = Console.ReadLine();
                     LOGGER.CursorIndex += 2;
-                    Console.CursorVisible = false;
                     for (int i = startCursorIndex; i < LOGGER.CursorIndex; i++)
                     {
                         Console.SetCursorPosition(0, i);
@@ -633,12 +653,10 @@ namespace N_m3u8DL_CLI
                         Console.WriteLine("".PadRight(13) + $"[{i.ToString().PadLeft(2)}]. {bestUrlSub} => {MEDIA_SUB_GROUP[bestUrlSub][i]}");
                         LOGGER.CursorIndex++;
                     }
-                    Console.CursorVisible = true;
                     LOGGER.PrintLine("Please Select What You Want.(Up To 1 Track)");
                     Console.Write("".PadRight(13) + "Enter Number: ");
                     var input = Console.ReadLine();
                     LOGGER.CursorIndex += 2;
-                    Console.CursorVisible = false;
                     for (int i = startCursorIndex; i < LOGGER.CursorIndex; i++)
                     {
                         Console.SetCursorPosition(0, i);
